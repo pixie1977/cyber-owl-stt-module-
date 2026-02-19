@@ -92,7 +92,9 @@ STT_SAMPLE_VOICES_PATH=resources/sample_voices
 Запустите скрипт:
 
 
-python import sounddevice as sd print(sd.query_devices())
+python 
+import sounddevice as sd 
+print(sd.query_devices())
 
 Найдите устройство с `max_input_channels > 0` и используйте его имя, например:
 

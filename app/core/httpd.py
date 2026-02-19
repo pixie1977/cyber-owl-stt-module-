@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """
-HTTP-сервер на FastAPI для TTS с поддержкой POST, GET
+HTTP-сервер на FastAPI для STT с поддержкой GET.
 """
+from __future__ import annotations
+
 import asyncio
 import os
-from fastapi import FastAPI, Request, Form, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from typing import Dict
+
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.config.config import STT_DOC_ROOT, STT_VOSK_MODEL_PATH
-
-# Импорт TTS движка
 from app.core.speech_to_text import Speech2Text
 from app.utils.stt_utils import is_listening_active, pop_all_messages
 
@@ -24,19 +26,25 @@ app.mount("/static", StaticFiles(directory=STT_DOC_ROOT), name="static")
 # Инициализация
 stt_engine = Speech2Text(model_path=STT_VOSK_MODEL_PATH, samplerate=16000)
 
+# Асинхронная очередь для хранения распознанных фраз
 message_queue = asyncio.Queue()
 
 # Глобальная переменная для хранения последнего распознанного текста
 latest_transcript = ""
 
 
-# Модель для JSON-запроса
+# Модель для запросов (заглушка, если потребуется в будущем)
 class TTSTextRequest(BaseModel):
     text: str
 
 
 @app.get("/")
-async def read_root():
+async def read_root() -> FileResponse | Dict[str, str]:
+    """
+    Возвращает главную страницу приложения.
+
+    :return: HTML-файл или JSON-ответ
+    """
     index_path = os.path.join(STT_DOC_ROOT, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
@@ -44,20 +52,22 @@ async def read_root():
 
 
 @app.get("/health")
-async def health_check():
-    if stt_engine.healthcheck() == "OK" and is_listening_active():
-        health_check_status = "OK"
-    else:
-        health_check_status = "NOT OK"
-    return {"status": "ok", "service": health_check_status}
+async def health_check() -> Dict[str, str]:
+    """
+    Проверка работоспособности сервиса.
+
+    :return: статус сервиса
+    """
+    status = "OK" if stt_engine.healthcheck() == "OK" and is_listening_active() else "NOT OK"
+    return {"status": "ok", "service": status}
 
 
-# Эндпоинт для получения последнего распознанного текста
 @app.get("/api/stt/latest")
-async def get_latest_transcript():
+async def get_latest_transcript() -> Dict[str, str]:
     """
-    Возвращает последний распознанный фрагмент речи.
+    Возвращает все накопленные распознанные фразы одной строкой и очищает очередь.
+
+    :return: JSON с ключом 'text'
     """
-    return {"text": await pop_all_messages(message_queue)}
-
-
+    full_text = await pop_all_messages(message_queue)
+    return {"text": full_text}

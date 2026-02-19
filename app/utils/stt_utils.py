@@ -1,31 +1,49 @@
-# Флаг для управления фоновым потоком
+"""
+Утилиты для работы с распознаванием речи: запуск прослушивания, управление очередью сообщений.
+"""
+
 import asyncio
 import threading
 from asyncio import Queue
-from typing import Callable
+from typing import Callable, Dict, Optional
 
 from app.core.speech_to_text import Speech2Text
 
-listening_active = False
 
-def is_listening_active():
+# Глобальные переменные
+listening_active = False
+latest_transcript = ""
+
+
+def is_listening_active() -> bool:
+    """
+    Проверяет, активно ли прослушивание микрофона.
+
+    :return: True, если прослушивание активно
+    """
     return listening_active
 
-# --- Функции работы с очередью ---
-async def push_message(text: str, message_queue: Queue):
+
+async def push_message(text: str, message_queue: Queue) -> None:
     """
-    Добавляет сообщение в очередь распознанных фраз.
+    Добавляет сообщение в очередь распознанных фраз и обновляет последний текст.
+
+    :param text: распознанный текст
+    :param message_queue: асинхронная очередь для хранения сообщений
     """
-    if text.strip():
-        await message_queue.put(text.strip())
-        global latest_transcript
-        latest_transcript = text.strip()  # Обновляем последний текст
+    if not text.strip():
+        return
+    await message_queue.put(text.strip())
+    global latest_transcript
+    latest_transcript = text.strip()
 
 
 async def pop_all_messages(message_queue: Queue) -> str:
     """
     Вычитывает все накопленные сообщения из очереди и возвращает их одной строкой.
-    Сообщения объединяются через пробел.
+
+    :param message_queue: очередь сообщений
+    :return: объединённый текст всех сообщений через пробел
     """
     messages = []
     try:
@@ -38,30 +56,50 @@ async def pop_all_messages(message_queue: Queue) -> str:
     return " ".join(messages)
 
 
-def run_stt_listener(stt_engine:Speech2Text, queue:Queue, callback:Callable):
+def run_stt_listener(
+    stt_engine: Speech2Text,
+    queue: Queue,
+    callback: Optional[Callable[[str], None]]
+) -> None:
     """
     Фоновая функция, запускающая прослушивание микрофона.
-    Вызывает listen() из Speech2Text и отправляет распознанные фразы в очередь.
+
+    :param stt_engine: экземпляр движка распознавания речи
+    :param queue: очередь для добавления распознанных фраз
+    :param callback: опциональная функция обратного вызова при распознавании
     """
     global listening_active
     listening_active = True
     print("🎙️ Запуск прослушивания микрофона...")
 
     try:
-        # Метод listen должен быть генератором или вызывать callback
         for text in stt_engine.listen():
             if not listening_active:
                 break
-            asyncio.run(push_message(text, queue))
-            if callable(callback):
-              result=callback(text=text)
+            # Используем потокобезопасный способ вызова асинхронной функции
+            loop = asyncio.get_event_loop()
+            asyncio.run_coroutine_threadsafe(push_message(text, queue), loop)
+            if callback is not None and callable(callback):
+                callback(text)
     except Exception as e:
         print(f"❌ Ошибка в фоновом потоке STT: {e}")
     finally:
         listening_active = False
 
 
-def start_listening(stt_engine: Speech2Text, queue : Queue , on_result_callback=None)-> dict[str, str]:
+def start_listening(
+    stt_engine: Speech2Text,
+    queue: Queue,
+    on_result_callback: Optional[Callable[[str], None]] = None
+) -> Dict[str, str]:
+    """
+    Запускает фоновое прослушивание микрофона в отдельном потоке.
+
+    :param stt_engine: движок распознавания речи
+    :param queue: очередь для сохранения текста
+    :param on_result_callback: опциональный callback на каждое распознанное сообщение
+    :return: статус операции
+    """
     global listening_active
     if listening_active:
         return {"status": "already_running"}
@@ -69,17 +107,19 @@ def start_listening(stt_engine: Speech2Text, queue : Queue , on_result_callback=
     thread = threading.Thread(
         target=run_stt_listener,
         args=(stt_engine, queue, on_result_callback),
-        daemon=True)
+        daemon=True
+    )
     thread.start()
 
     return {"status": "success"}
 
 
-async def stop_listening():
+async def stop_listening() -> Dict[str, str]:
     """
     Останавливает прослушивание микрофона.
+
+    :return: статус операции
     """
     global listening_active
     listening_active = False
     return {"status": "stopped"}
-

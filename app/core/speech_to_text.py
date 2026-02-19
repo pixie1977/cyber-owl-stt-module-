@@ -8,6 +8,7 @@ import queue
 import sys
 import os
 from time import sleep
+from typing import Generator
 
 import sounddevice as sd
 import vosk
@@ -75,7 +76,7 @@ class Speech2Text:
         self.q_clear()
         self._is_active = True
 
-    def listen(self):
+    def listen(self) -> Generator[str, None, None]:
         """
         Генератор: возвращает распознанные фразы по мере их появления.
 

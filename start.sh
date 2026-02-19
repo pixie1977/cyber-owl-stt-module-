@@ -7,7 +7,7 @@ set -e  # Прерывать выполнение при ошибке
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_DIR="$SCRIPT_DIR/venv"
 REQUIREMENTS="$SCRIPT_DIR/requirements.txt"
-MAIN_MODULE="$SCRIPT_DIR/app/main.py"
+MAIN_MODULE="-m app.main"
 
 echo "🔍 Определяем окружение..."
 

@@ -13,6 +13,7 @@ from app.core.speech_to_text import Speech2Text
 # Глобальные переменные
 listening_active = False
 latest_transcript = ""
+main_loop: asyncio.AbstractEventLoop | None = None  # Будет установлен из основного потока
 
 
 def is_listening_active() -> bool:
@@ -56,6 +57,16 @@ async def pop_all_messages(message_queue: Queue) -> str:
     return " ".join(messages)
 
 
+def set_event_loop(loop: asyncio.AbstractEventLoop) -> None:
+    """
+    Устанавливает основной event loop для использования в фоновых потоках.
+
+    :param loop: цикл событий из основного потока
+    """
+    global main_loop
+    main_loop = loop
+
+
 def run_stt_listener(
     stt_engine: Speech2Text,
     queue: Queue,
@@ -68,17 +79,24 @@ def run_stt_listener(
     :param queue: очередь для добавления распознанных фраз
     :param callback: опциональная функция обратного вызова при распознавании
     """
-    global listening_active
+    global listening_active, main_loop
     listening_active = True
     print("🎙️ Запуск прослушивания микрофона...")
+
+    # Убедимся, что в потоке есть event loop (необходимо для Windows/uvicorn)
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
 
     try:
         for text in stt_engine.listen():
             if not listening_active:
                 break
-            # Используем потокобезопасный способ вызова асинхронной функции
-            loop = asyncio.get_event_loop()
-            asyncio.run_coroutine_threadsafe(push_message(text, queue), loop)
+            if main_loop is not None:
+                asyncio.run_coroutine_threadsafe(push_message(text, queue), main_loop)
+            else:
+                print("⚠️ Event loop не установлен. Сообщение пропущено:", text)
             if callback is not None and callable(callback):
                 callback(text)
     except Exception as e:

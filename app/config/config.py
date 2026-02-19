@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 CURRENT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
 # Загружаем .env файл
-load_dotenv(dotenv_path=os.path.join(CURRENT_DIRECTORY, "..", ".env"))
+load_dotenv()
 
 
 # Проверка обязательной переменной

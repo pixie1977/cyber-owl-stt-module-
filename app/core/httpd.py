@@ -39,7 +39,7 @@ class TTSTextRequest(BaseModel):
 
 
 @app.get("/")
-async def read_root() -> FileResponse | Dict[str, str]:
+async def read_root():
     """
     Возвращает главную страницу приложения.
 

@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app.config.config import STT_DOC_ROOT, STT_VOSK_MODEL_PATH
+from app.config.config import STT_DOC_ROOT, STT_VOSK_MODEL_PATH, STT_SOUND_DEVICE_INDEX
 from app.core.speech_to_text import Speech2Text
 from app.utils.stt_utils import is_listening_active, pop_all_messages
 
@@ -24,7 +24,10 @@ print(f"STT_DOC_ROOT={STT_DOC_ROOT}")
 app.mount("/static", StaticFiles(directory=STT_DOC_ROOT), name="static")
 
 # Инициализация
-stt_engine = Speech2Text(model_path=STT_VOSK_MODEL_PATH, samplerate=16000)
+stt_engine = Speech2Text(
+    model_path=STT_VOSK_MODEL_PATH,
+    samplerate=16000,
+    sound_device_index=STT_SOUND_DEVICE_INDEX)
 
 # Асинхронная очередь для хранения распознанных фраз
 message_queue = asyncio.Queue()

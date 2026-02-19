@@ -23,9 +23,12 @@ if not STT_USE_TORCH_MODEL_MANAGER_STR:
 STT_USE_TORCH_MODEL_MANAGER = strtobool(STT_USE_TORCH_MODEL_MANAGER_STR)
 
 
-# Аудиоустройство (опционально)
-STT_SOUND_DEVICE_NAME = os.getenv("STT_SOUND_DEVICE_NAME")
+# Аудиоустройство
+STT_SOUND_DEVICE_INDEX = os.getenv("STT_SOUND_DEVICE_INDEX")
+if not STT_SOUND_DEVICE_INDEX:
+    raise ValueError("Не задан STT_USE_TORCH_MODEL_MANAGER_STR в .env")
 
+STT_SOUND_DEVICE_INDEX = int(STT_SOUND_DEVICE_INDEX)
 
 # Пути к моделям
 STT_VOSK_MODEL_PATH = os.getenv("STT_VOSK_MODEL_PATH")

@@ -2,6 +2,8 @@
 Утилиты для работы с распознаванием речи: запуск прослушивания, управление очередью сообщений.
 """
 
+from __future__ import annotations
+
 import asyncio
 import threading
 from asyncio import Queue
@@ -20,7 +22,7 @@ def is_listening_active() -> bool:
     """
     Проверяет, активно ли прослушивание микрофона.
 
-    :return: True, если прослушивание активно
+    :return: True, если прослушивание активно.
     """
     return listening_active
 
@@ -29,8 +31,8 @@ async def push_message(text: str, message_queue: Queue) -> None:
     """
     Добавляет сообщение в очередь распознанных фраз и обновляет последний текст.
 
-    :param text: распознанный текст
-    :param message_queue: асинхронная очередь для хранения сообщений
+    :param text: распознанный текст.
+    :param message_queue: асинхронная очередь для хранения сообщений.
     """
     if not text.strip():
         return
@@ -43,8 +45,8 @@ async def pop_all_messages(message_queue: Queue) -> str:
     """
     Вычитывает все накопленные сообщения из очереди и возвращает их одной строкой.
 
-    :param message_queue: очередь сообщений
-    :return: объединённый текст всех сообщений через пробел
+    :param message_queue: очередь сообщений.
+    :return: объединённый текст всех сообщений через пробел.
     """
     messages = []
     try:
@@ -61,7 +63,7 @@ def set_event_loop(loop: asyncio.AbstractEventLoop) -> None:
     """
     Устанавливает основной event loop для использования в фоновых потоках.
 
-    :param loop: цикл событий из основного потока
+    :param loop: цикл событий из основного потока.
     """
     global main_loop
     main_loop = loop
@@ -75,9 +77,9 @@ def run_stt_listener(
     """
     Фоновая функция, запускающая прослушивание микрофона.
 
-    :param stt_engine: экземпляр движка распознавания речи
-    :param queue: очередь для добавления распознанных фраз
-    :param callback: опциональная функция обратного вызова при распознавании
+    :param stt_engine: экземпляр движка распознавания речи.
+    :param queue: очередь для добавления распознанных фраз.
+    :param callback: опциональная функция обратного вызова при распознавании.
     """
     global listening_active, main_loop
     listening_active = True
@@ -96,7 +98,7 @@ def run_stt_listener(
             if main_loop is not None:
                 asyncio.run_coroutine_threadsafe(push_message(text, queue), main_loop)
             else:
-                print("⚠️ Event loop не установлен. Сообщение пропущено:", text)
+                print(f"⚠️ Event loop не установлен. Сообщение пропущено: {text}")
             if callback is not None and callable(callback):
                 callback(text)
     except Exception as e:
@@ -113,10 +115,10 @@ def start_listening(
     """
     Запускает фоновое прослушивание микрофона в отдельном потоке.
 
-    :param stt_engine: движок распознавания речи
-    :param queue: очередь для сохранения текста
-    :param on_result_callback: опциональный callback на каждое распознанное сообщение
-    :return: статус операции
+    :param stt_engine: движок распознавания речи.
+    :param queue: очередь для сохранения текста.
+    :param on_result_callback: опциональный callback на каждое распознанное сообщение.
+    :return: статус операции.
     """
     global listening_active
     if listening_active:
@@ -125,7 +127,7 @@ def start_listening(
     thread = threading.Thread(
         target=run_stt_listener,
         args=(stt_engine, queue, on_result_callback),
-        daemon=True
+        daemon=True,
     )
     thread.start()
 
@@ -136,7 +138,7 @@ async def stop_listening() -> Dict[str, str]:
     """
     Останавливает прослушивание микрофона.
 
-    :return: статус операции
+    :return: статус операции.
     """
     global listening_active
     listening_active = False

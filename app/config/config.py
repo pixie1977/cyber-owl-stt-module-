@@ -65,3 +65,7 @@ if not STT_HOST:
 STT_LOG_LEVEL = os.getenv("STT_LOG_LEVEL")
 if not STT_LOG_LEVEL:
     raise ValueError("Не задан STT_LOG_LEVEL в .env")
+
+STT_URL_TO_TEXT_TRANSMIT = os.getenv("STT_URL_TO_TEXT_TRANSMIT")
+
+STT_LOGS_DIR = os.getenv("STT_LOGS_DIR")

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-HTTP-сервер на FastAPI для STT с поддержкой GET.
+HTTP-сервер на FastAPI для STT с поддержкой GET и POST.
 """
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from app.config.config import STT_DOC_ROOT, STT_VOSK_MODEL_PATH, STT_SOUND_DEVIC
 from app.core.speech_to_text import Speech2Text
 from app.utils.stt_utils import is_listening_active, pop_all_messages
 
+
 app = FastAPI(title="STT API Server")
 
 # Подключаем статические файлы
@@ -27,7 +28,8 @@ app.mount("/static", StaticFiles(directory=STT_DOC_ROOT), name="static")
 stt_engine = Speech2Text(
     model_path=STT_VOSK_MODEL_PATH,
     samplerate=16000,
-    sound_device_index=STT_SOUND_DEVICE_INDEX)
+    sound_device_index=STT_SOUND_DEVICE_INDEX,
+)
 
 # Асинхронная очередь для хранения распознанных фраз
 message_queue = asyncio.Queue()
@@ -36,8 +38,8 @@ message_queue = asyncio.Queue()
 latest_transcript = ""
 
 
-# Модель для запросов (заглушка, если потребуется в будущем)
-class TTSTextRequest(BaseModel):
+# Модель для POST-запросов
+class TextRequest(BaseModel):
     text: str
 
 
@@ -62,7 +64,7 @@ async def health_check() -> Dict[str, str]:
     :return: статус сервиса
     """
     status = "OK" if stt_engine.healthcheck() == "OK" and is_listening_active() else "NOT OK"
-    return {"status": "ok", "service": status}
+    return {"server_status": "ok", "service": status}
 
 
 @app.get("/api/stt/latest")
@@ -74,3 +76,22 @@ async def get_latest_transcript() -> Dict[str, str]:
     """
     full_text = await pop_all_messages(message_queue)
     return {"text": full_text}
+
+
+@app.post("/api/stt/text")
+async def post_text(request: TextRequest) -> Dict[str, str]:
+    """
+    Принимает текстовую строку и добавляет её в очередь распознанных фраз.
+    Может использоваться для тестирования или симуляции распознавания.
+
+    :param request: объект с полем `text`
+    :return: подтверждение приёма
+    """
+    global latest_transcript
+    text = request.text.strip()
+
+    # Добавляем в очередь
+    await message_queue.put(text)
+    latest_transcript = text
+
+    return {"status": "received", "text": text}

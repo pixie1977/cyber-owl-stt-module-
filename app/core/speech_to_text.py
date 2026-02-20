@@ -13,13 +13,15 @@ from typing import Generator
 import sounddevice as sd
 import vosk
 
+from app.core.logger import get_logger
+
 
 class Speech2Text:
     """
     Класс для потокового распознавания речи с микрофона.
     """
 
-    _log = logging.getLogger(__name__)
+    _log = get_logger(__name__)
     _healthcheck = "OK"
 
     def __init__(
@@ -97,6 +99,7 @@ class Speech2Text:
                         if self._rec.AcceptWaveform(data):
                             text = json.loads(self._rec.Result())["text"]
                             if text.strip():
+                                self._log.info(f"STT module detected text: {text}")
                                 yield text
             except Exception as e:
                 self._log.exception("Ошибка в процессе распознавания: %s", e)
@@ -107,6 +110,7 @@ class Speech2Text:
         """Останавливает прослушивание и освобождает ресурсы."""
         self._is_active = False
         self._healthcheck = "BAD"
+        self._log.info("STT module CLOSED")
 
     def healthcheck(self) -> str:
         """
